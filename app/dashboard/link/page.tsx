@@ -682,13 +682,16 @@ const AppearanceTab = ({
                       : "border-muted group-hover:border-accent-foreground"
                   }`}
                 >
-                  {/* <Image
-                    src={template.image}
-                    alt={template.name}
-                    width={400}
-                    height={250}
-                    className="w-full h-auto object-cover transition-transform group-hover:scale-105"
-                  /> */}
+                  <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold mb-2">
+                        {template.name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Template Preview
+                      </div>
+                    </div>
+                  </div>
                   {profile.template === template.name && (
                     <div className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full p-1.5 shadow-lg">
                       <Check className="w-5 h-5" />
@@ -1299,7 +1302,7 @@ export default function LinkPage() {
     updateProducts,
     updateTestimonials,
     updateBlogPosts,
-    refreshProfiles,
+    migrateFromLocalStorage,
   } = useProfiles();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1464,7 +1467,7 @@ export default function LinkPage() {
             {/* Check if user has localStorage data to migrate */}
             {typeof window !== "undefined" &&
               localStorage.getItem("vlink-profiles") && (
-                <MigrationButton onMigrationComplete={refreshProfiles} />
+                <MigrationButton onMigrate={migrateFromLocalStorage} />
               )}
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1565,12 +1568,12 @@ export default function LinkPage() {
   );
 
   return (
-    <section className="flex flex-col items-start justify-start p-6 w-full">
+    <div className="flex h-screen w-full flex-col bg-muted/40 overflow-hidden">
       {/* Header Section */}
-      <div className="w-full mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold tracking-tight">
+      <header className="flex-shrink-0 flex h-auto items-center gap-4 border-b bg-background px-4 py-4 sm:px-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 w-full">
+          <div className="flex flex-col gap-2 min-w-0">
+            <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight">
               Link Manager
             </h1>
             <p className="text-muted-foreground">
@@ -1578,18 +1581,23 @@ export default function LinkPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 lg:gap-4 min-w-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-1 lg:gap-2 max-w-[200px] lg:max-w-none"
+                >
+                  <Avatar className="h-6 w-6 lg:h-7 lg:w-7 flex-shrink-0">
                     <AvatarImage src={activeProfile?.avatar} />
                     <AvatarFallback>
                       {activeProfile?.displayName?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <span>{activeProfile?.displayName || "Select Profile"}</span>
-                  <ChevronDown className="h-4 w-4" />
+                  <span className="truncate text-sm lg:text-base">
+                    {activeProfile?.displayName || "Select Profile"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -1703,71 +1711,102 @@ export default function LinkPage() {
                 </Dialog>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button asChild variant="outline">
+            <Button asChild variant="outline" className="flex-shrink-0">
               <Link href={`/${activeProfile?.username}`} target="_blank">
-                <Eye className="mr-2 h-4 w-4" />
-                View Live
+                <Eye className="mr-1 lg:mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">View Live</span>
+                <span className="sm:hidden">Live</span>
               </Link>
             </Button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="@container/main flex flex-1 flex-col gap-2 w-full">
-        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-8">
+      <main className="flex-1 overflow-auto touch-auto">
+        <div className="p-4 md:p-8 space-y-4 md:space-y-8">
+          <div className="grid gap-4 md:gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4 md:space-y-8 min-w-0 max-w-full">
               <StatsCards
                 totalViews={activeProfile.views}
                 totalClicks={totalClicks}
               />
               <Tabs defaultValue="links" className="w-full">
-                <div className="overflow-x-auto">
-                  <TabsList className="inline-flex h-auto">
-                    <TabsTrigger value="links">
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      Links
+                <div className="overflow-x-auto pb-2 touch-auto">
+                  <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1">
+                    <TabsTrigger
+                      value="links"
+                      className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                    >
+                      <LinkIcon className="mr-1 lg:mr-2 h-4 w-4" />
+                      <span>Links</span>
                     </TabsTrigger>
-                    <TabsTrigger value="profile">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
+                    <TabsTrigger
+                      value="profile"
+                      className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                    >
+                      <User className="mr-1 lg:mr-2 h-4 w-4" />
+                      <span>Profile</span>
                     </TabsTrigger>
-                    <TabsTrigger value="appearance">
-                      <Palette className="mr-2 h-4 w-4" />
-                      Appearance
+                    <TabsTrigger
+                      value="appearance"
+                      className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                    >
+                      <Palette className="mr-1 lg:mr-2 h-4 w-4" />
+                      <span>Appearance</span>
                     </TabsTrigger>
-                    <TabsTrigger value="gallery">
-                      <Camera className="mr-2 h-4 w-4" />
-                      Gallery
+                    <TabsTrigger
+                      value="gallery"
+                      className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                    >
+                      <Camera className="mr-1 lg:mr-2 h-4 w-4" />
+                      <span>Gallery</span>
                     </TabsTrigger>
-                    <TabsTrigger value="analytics">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Analytics
+                    <TabsTrigger
+                      value="analytics"
+                      className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                    >
+                      <BarChart3 className="mr-1 lg:mr-2 h-4 w-4" />
+                      <span>Analytics</span>
                     </TabsTrigger>
 
                     {/* --- DYNAMIC VCARD TABS --- */}
                     {activeProfile.type === "VCARD" && (
                       <>
-                        <TabsTrigger value="services">
-                          <Briefcase className="mr-2 h-4 w-4" />
-                          Services
+                        <TabsTrigger
+                          value="services"
+                          className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                        >
+                          <Briefcase className="mr-1 lg:mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Services</span>
                         </TabsTrigger>
-                        <TabsTrigger value="products">
-                          <Package className="mr-2 h-4 w-4" />
-                          Products
+                        <TabsTrigger
+                          value="products"
+                          className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                        >
+                          <Package className="mr-1 lg:mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Products</span>
                         </TabsTrigger>
-                        <TabsTrigger value="testimonials">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Testimonials
+                        <TabsTrigger
+                          value="testimonials"
+                          className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                        >
+                          <MessageSquare className="mr-1 lg:mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Testimonials</span>
                         </TabsTrigger>
-                        <TabsTrigger value="blog">
-                          <BookOpen className="mr-2 h-4 w-4" />
-                          Blog
+                        <TabsTrigger
+                          value="blog"
+                          className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                        >
+                          <BookOpen className="mr-1 lg:mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Blog</span>
                         </TabsTrigger>
-                        <TabsTrigger value="hours">
-                          <Clock className="mr-2 h-4 w-4" />
-                          Hours
+                        <TabsTrigger
+                          value="hours"
+                          className="flex-shrink-0 min-h-[44px] px-3 md:px-4"
+                        >
+                          <Clock className="mr-1 lg:mr-2 h-4 w-4" />
+                          <span className="hidden sm:inline">Hours</span>
                         </TabsTrigger>
                       </>
                     )}
@@ -1866,12 +1905,14 @@ export default function LinkPage() {
               </Tabs>
             </div>
 
-            <div className="lg:col-span-1">
-              <LivePreview profile={activeProfile} />
+            <div className="lg:col-span-1 flex-shrink-0">
+              <div className="sticky top-4">
+                <LivePreview profile={activeProfile} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </main>
+    </div>
   );
 }

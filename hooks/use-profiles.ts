@@ -54,6 +54,8 @@ interface UseProfilesResult {
   addBlogPost: (profileId: string, postData: { title: string; content: string; imageUrl?: string }) => Promise<void>;
   updateBlogPosts: (profileId: string, blogPosts: BlogPost[]) => Promise<void>;
   deleteBlogPost: (profileId: string, postId: string) => Promise<void>;
+  // Migration
+  migrateFromLocalStorage: () => Promise<{ success: boolean; migratedCount: number }>;
 }
 
 export function useProfiles(): UseProfilesResult {
@@ -86,51 +88,42 @@ export function useProfiles(): UseProfilesResult {
     }
   }, [activeProfileId]);
 
-  // Check for localStorage data and trigger migration if needed
+  // Load profiles from database
   useEffect(() => {
-    const checkForMigration = async () => {
+    const loadProfiles = async () => {
       try {
-        const localProfiles = localStorage.getItem("vlink-profiles");
+        setLoading(true);
+        setError(null);
         
-        if (localProfiles) {
-          // We have localStorage data, attempt migration
-          console.log("Found localStorage data, attempting migration...");
+        // Simply load profiles from database
+        const response = await fetch("/api/profiles");
+        
+        if (response.ok) {
+          const data = await response.json();
+          setProfiles(data);
           
-          const profilesData = JSON.parse(localProfiles);
-          const response = await fetch("/api/migrate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profiles: profilesData }),
-          });
-
-          if (response.ok) {
-            console.log("Migration successful!");
-            // Clear localStorage after successful migration
-            localStorage.removeItem("vlink-profiles");
-            localStorage.removeItem("vlink-active-profile-id");
-            
-            // Load data from database
-            await refreshProfiles();
-          } else {
-            console.error("Migration failed, falling back to localStorage");
-            // Fallback to localStorage if migration fails
-            setProfiles(profilesData);
-            setActiveProfileId(profilesData[0]?.id || null);
+          // Set active profile if none selected and profiles exist
+          if (!activeProfileId && data.length > 0) {
+            setActiveProfileId(data[0].id);
           }
         } else {
-          // No localStorage data, load from database
-          await refreshProfiles();
+          // If API fails, user starts fresh (no localStorage fallback)
+          console.log("No profiles found or API error, user starts fresh");
+          setProfiles([]);
+          setActiveProfileId(null);
         }
       } catch (error) {
-        console.error("Error during migration check:", error);
-        setError("Failed to load profiles");
+        console.error("Error loading profiles:", error);
+        // Don't show error for fresh users, just start fresh
+        setProfiles([]);
+        setActiveProfileId(null);
       } finally {
         setLoading(false);
       }
     };
 
-    checkForMigration();
-  }, [refreshProfiles]);
+    loadProfiles();
+  }, [activeProfileId]);
 
   const createProfile = async (profileData: Partial<UserProfile>) => {
     try {
@@ -553,6 +546,51 @@ export function useProfiles(): UseProfilesResult {
     }
   };
 
+  const migrateFromLocalStorage = async () => {
+    try {
+      setLoading(true);
+      
+      const localProfiles = localStorage.getItem("vlink-profiles");
+      if (!localProfiles) {
+        throw new Error("No localStorage data found to migrate");
+      }
+
+      const profilesData = JSON.parse(localProfiles);
+      if (profilesData.length === 0) {
+        throw new Error("No profiles found in localStorage");
+      }
+
+      console.log("Starting manual migration...");
+      
+      const response = await fetch("/api/migrate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profiles: profilesData }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Migration failed");
+      }
+
+      console.log("Migration successful!");
+      
+      // Clear localStorage after successful migration
+      localStorage.removeItem("vlink-profiles");
+      localStorage.removeItem("vlink-active-profile-id");
+      
+      // Reload profiles from database
+      await refreshProfiles();
+      
+      return { success: true, migratedCount: profilesData.length };
+    } catch (error) {
+      console.error("Manual migration failed:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     profiles,
     activeProfileId,
@@ -587,5 +625,7 @@ export function useProfiles(): UseProfilesResult {
     addBlogPost,
     updateBlogPosts,
     deleteBlogPost,
+    // Migration
+    migrateFromLocalStorage,
   };
 }

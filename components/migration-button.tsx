@@ -10,54 +10,29 @@ import { useState } from "react";
 import { Database, Download } from "lucide-react";
 
 interface MigrationButtonProps {
-  onMigrationComplete?: () => void;
+  onMigrate: () => Promise<{ success: boolean; migratedCount: number }>;
 }
 
-export function MigrationButton({ onMigrationComplete }: MigrationButtonProps) {
+export function MigrationButton({ onMigrate }: MigrationButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [migrationStatus, setMigrationStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
+  const [migratedCount, setMigratedCount] = useState(0);
 
   const handleMigration = async () => {
     try {
       setIsLoading(true);
       setMigrationStatus("idle");
 
-      // Check if there's localStorage data to migrate
-      const savedProfiles = localStorage.getItem("vlink-profiles");
-      if (!savedProfiles) {
+      const result = await onMigrate();
+
+      if (result.success) {
+        setMigrationStatus("success");
+        setMigratedCount(result.migratedCount);
+      } else {
         setMigrationStatus("error");
-        console.log("No localStorage data found to migrate");
-        return;
       }
-
-      const profiles = JSON.parse(savedProfiles);
-      if (!Array.isArray(profiles) || profiles.length === 0) {
-        setMigrationStatus("error");
-        console.log("No valid profiles found in localStorage");
-        return;
-      }
-
-      // Send migration request
-      const response = await fetch("/api/migrate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ profiles }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Migration failed");
-      }
-
-      // Clear localStorage after successful migration
-      localStorage.removeItem("vlink-profiles");
-      localStorage.removeItem("vlink-active-profile-id");
-
-      setMigrationStatus("success");
-      onMigrationComplete?.();
     } catch (error) {
       console.error("Migration error:", error);
       setMigrationStatus("error");
@@ -80,8 +55,8 @@ export function MigrationButton({ onMigrationComplete }: MigrationButtonProps) {
       <CardContent className="space-y-4">
         {migrationStatus === "success" && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
-            ✅ Migration completed successfully! Your data is now saved in the
-            database.
+            ✅ Migration completed successfully! {migratedCount} profile
+            {migratedCount !== 1 ? "s" : ""} migrated to the database.
           </div>
         )}
 

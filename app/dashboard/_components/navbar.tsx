@@ -45,6 +45,14 @@ export default function DashboardTopNav({ children }: { children: ReactNode }) {
                 </Link>
               </DialogClose>
               <DialogClose asChild>
+                <Link prefetch={true} href="/dashboard/link">
+                  <Button variant="outline" className="w-full">
+                    <LucideGitBranchPlus className="mr-2 h-4 w-4" />
+                    Links
+                  </Button>
+                </Link>
+              </DialogClose>
+              <DialogClose asChild>
                 <Link prefetch={true} href="/dashboard/create">
                   <Button variant="outline" className="w-full">
                     <Brush className="mr-2 h-4 w-4" />

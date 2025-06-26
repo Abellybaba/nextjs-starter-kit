@@ -26,6 +26,11 @@ const navItems: NavItem[] = [
     icon: HomeIcon,
   },
   {
+    label: "Links",
+    href: "dashboard/link",
+    icon: HomeIcon,
+  },
+  {
     label: "Chat",
     href: "/dashboard/chat",
     icon: MessageCircleIcon,
@@ -55,7 +60,7 @@ export default function DashboardSideBar() {
             className="flex items-center font-semibold hover:cursor-pointer"
             href="/"
           >
-            <span>Nextjs Starter Kit</span>
+            <span>Linkhup</span>
           </Link>
         </div>
 
@@ -69,7 +74,7 @@ export default function DashboardSideBar() {
                   "flex items-center gap-2 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:cursor-pointer",
                   pathname === item.href
                     ? "bg-primary/10 text-primary hover:bg-primary/20"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <item.icon className="h-4 w-4" />
@@ -86,7 +91,7 @@ export default function DashboardSideBar() {
                   "flex items-center w-full gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:cursor-pointer",
                   pathname === "/dashboard/settings"
                     ? "bg-primary/10 text-primary hover:bg-primary/20"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
                 <Settings className="h-4 w-4" />

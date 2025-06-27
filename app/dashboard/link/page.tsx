@@ -1,7 +1,7 @@
 // filepath: /Users/abelokoh/Documents/GitHub/vlink/app/dashboard/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -223,9 +223,53 @@ function LinksTab({
 
   const handleAddSocialLink = () => {
     if (!selectedSocial || !socialInputValue) return;
-    const url = selectedSocial.placeholder?.startsWith("http")
-      ? socialInputValue
-      : `${selectedSocial.placeholder || ""}${socialInputValue}`;
+    
+    // Construct the URL properly based on the platform placeholder
+    let url = selectedSocial.placeholder || '';
+    
+    // Replace 'username' or similar placeholders with the actual user input
+    if (url.includes('username')) {
+      url = url.replace('username', socialInputValue);
+    } else if (url.includes('@username')) {
+      url = url.replace('@username', socialInputValue);
+    } else if (url.includes('your-id')) {
+      url = url.replace('your-id', socialInputValue);
+    } else if (url.includes('userid')) {
+      url = url.replace('userid', socialInputValue);
+    } else if (url.includes('your-user-id')) {
+      url = url.replace('your-user-id', socialInputValue);
+    } else if (url.includes('invitecode')) {
+      url = url.replace('invitecode', socialInputValue);
+    } else if (url.includes('your-meeting-id')) {
+      url = url.replace('your-meeting-id', socialInputValue);
+    } else if (url.includes('your-feed-url')) {
+      url = url.replace('your-feed-url', socialInputValue);
+    } else if (url.includes('your-workspace')) {
+      url = url.replace('your-workspace', socialInputValue);
+    } else if (url.includes('your-name')) {
+      url = url.replace('your-name', socialInputValue);
+    } else if (url.includes('your-app')) {
+      url = url.replace('your-app', socialInputValue);
+    } else if (url.includes('yourshop')) {
+      url = url.replace('yourshop', socialInputValue);
+    } else if (url.includes('your-store')) {
+      url = url.replace('your-store', socialInputValue);
+    } else if (url.includes('your-link')) {
+      url = url.replace('your-link', socialInputValue);
+    } else if (url.includes('1234567890')) {
+      url = url.replace('1234567890', socialInputValue);
+    } else if (!url.startsWith('http')) {
+      // If it's not a full URL, treat it as a URL prefix
+      url = `${url}${socialInputValue}`;
+    } else if (!socialInputValue.startsWith('http')) {
+      // If user input doesn't start with http and we couldn't find a placeholder, assume it's just the username part
+      // This is a fallback - we might need to manually handle each platform
+      console.warn(`Could not determine how to construct URL for ${selectedSocial.name} with placeholder: ${selectedSocial.placeholder}`);
+      url = socialInputValue.startsWith('http') ? socialInputValue : selectedSocial.placeholder?.replace(/\/[^\/]*$/, `/${socialInputValue}`) || socialInputValue;
+    } else {
+      // User provided a full URL
+      url = socialInputValue;
+    }
 
     const newLinkPayload: Omit<LinkItem, "id" | "isActive"> = {
       title: selectedSocial.name,
@@ -447,35 +491,46 @@ function LinksTab({
               <DialogHeader>
                 <DialogTitle>Add {selectedSocial.name} Link</DialogTitle>
                 <DialogDescription>
-                  Enter your {selectedSocial.name} details below.
+                  Enter your {selectedSocial.name} username or profile details below.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <Label htmlFor="social-input">
-                  {selectedSocial.urlPrefix
-                    ? "Username/Handle"
-                    : "Full Profile URL"}
-                </Label>
-                <div className="flex items-center">
-                  {selectedSocial.urlPrefix && (
-                    <span className="text-muted-foreground text-sm px-3 py-2 bg-muted rounded-l-md border border-r-0">
-                      {selectedSocial.placeholder}
-                    </span>
+                <div className="space-y-2">
+                  <Label htmlFor="social-input">
+                    {selectedSocial.placeholder?.includes("username") || 
+                     selectedSocial.placeholder?.includes("@username") ||
+                     selectedSocial.placeholder?.includes("your-id") ||
+                     selectedSocial.placeholder?.includes("your-name")
+                      ? "Username/Handle" 
+                      : "Profile URL or ID"}
+                  </Label>
+                  {selectedSocial.placeholder && (
+                    <p className="text-xs text-muted-foreground">
+                      Your link will be: <code className="bg-muted px-1 rounded text-xs">{selectedSocial.placeholder}</code>
+                    </p>
                   )}
-                  <Input
-                    id="social-input"
-                    placeholder={
-                      selectedSocial.placeholder?.includes("username")
-                        ? "username"
-                        : "your-id"
-                    }
-                    value={socialInputValue}
-                    onChange={(e) => setSocialInputValue(e.target.value)}
-                    className={selectedSocial.urlPrefix ? "rounded-l-none" : ""}
-                  />
                 </div>
+                <Input
+                  id="social-input"
+                  placeholder={(() => {
+                    const placeholder = selectedSocial.placeholder || '';
+                    if (placeholder.includes('username')) return 'yourUsername';
+                    if (placeholder.includes('@username')) return 'yourUsername';
+                    if (placeholder.includes('your-id')) return 'your-id';
+                    if (placeholder.includes('your-name')) return 'your-name';
+                    if (placeholder.includes('invitecode')) return 'invite-code';
+                    if (placeholder.includes('your-meeting-id')) return 'meeting-id';
+                    if (placeholder.includes('1234567890')) return 'phone-number';
+                    if (placeholder.includes('yourshop')) return 'shop-name';
+                    if (placeholder.includes('your-store')) return 'store-name';
+                    if (placeholder.includes('your-workspace')) return 'workspace-name';
+                    return 'username';
+                  })()}
+                  value={socialInputValue}
+                  onChange={(e) => setSocialInputValue(e.target.value)}
+                />
                 <Button onClick={handleAddSocialLink} className="w-full">
-                  Add Link
+                  Add {selectedSocial.name} Link
                 </Button>
               </div>
             </>
@@ -590,6 +645,51 @@ function ProfileTab({
   profile: UserProfile;
   onUpdateProfile: (updates: Partial<UserProfile>) => void;
 }) {
+  const [localProfile, setLocalProfile] = useState({
+    displayName: profile.displayName,
+    username: profile.username,
+    bio: profile.bio || "",
+  });
+
+  const [isChanged, setIsChanged] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Update local state when profile changes
+  useEffect(() => {
+    setLocalProfile({
+      displayName: profile.displayName,
+      username: profile.username,
+      bio: profile.bio || "",
+    });
+    setIsChanged(false);
+  }, [profile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setLocalProfile((prev) => ({ ...prev, [field]: value }));
+    setIsChanged(true);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onUpdateProfile(localProfile);
+      setIsChanged(false);
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setLocalProfile({
+      displayName: profile.displayName,
+      username: profile.username,
+      bio: profile.bio || "",
+    });
+    setIsChanged(false);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -619,16 +719,16 @@ function ProfileTab({
             <Label htmlFor="displayName">Display Name</Label>
             <Input
               id="displayName"
-              value={profile.displayName}
-              onChange={(e) => onUpdateProfile({ displayName: e.target.value })}
+              value={localProfile.displayName}
+              onChange={(e) => handleInputChange("displayName", e.target.value)}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              value={profile.username}
-              onChange={(e) => onUpdateProfile({ username: e.target.value })}
+              value={localProfile.username}
+              onChange={(e) => handleInputChange("username", e.target.value)}
             />
           </div>
         </div>
@@ -636,11 +736,37 @@ function ProfileTab({
           <Label htmlFor="bio">Bio</Label>
           <Textarea
             id="bio"
-            value={profile.bio}
-            onChange={(e) => onUpdateProfile({ bio: e.target.value })}
+            value={localProfile.bio}
+            onChange={(e) => handleInputChange("bio", e.target.value)}
             rows={3}
+            placeholder="Tell people about yourself..."
           />
         </div>
+
+        {/* Save/Cancel buttons */}
+        {isChanged && (
+          <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border">
+            <div className="flex-1">
+              <p className="text-sm font-medium">You have unsaved changes</p>
+              <p className="text-xs text-muted-foreground">
+                Save your changes or cancel to discard them.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+                disabled={isSaving}
+              >
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

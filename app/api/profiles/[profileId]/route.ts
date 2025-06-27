@@ -11,6 +11,11 @@ export async function GET(
   { params }: { params: { profileId: string } }
 ) {
   try {
+    // Validate profileId parameter
+    if (!params.profileId) {
+      return NextResponse.json({ error: "Profile ID is required" }, { status: 400 });
+    }
+
     const result = await auth.api.getSession({
       headers: await headers(),
     });
@@ -62,6 +67,11 @@ export async function PUT(
   { params }: { params: { profileId: string } }
 ) {
   try {
+    // Validate profileId parameter
+    if (!params.profileId) {
+      return NextResponse.json({ error: "Profile ID is required" }, { status: 400 });
+    }
+
     const result = await auth.api.getSession({
       headers: await headers(),
     });
@@ -135,6 +145,11 @@ export async function PATCH(
   { params }: { params: { profileId: string } }
 ) {
   try {
+    // Validate profileId parameter
+    if (!params.profileId) {
+      return NextResponse.json({ error: "Profile ID is required" }, { status: 400 });
+    }
+
     const body = await request.json();
     const { views } = body;
 
@@ -199,6 +214,11 @@ export async function DELETE(
   { params }: { params: { profileId: string } }
 ) {
   try {
+    // Validate profileId parameter
+    if (!params.profileId) {
+      return NextResponse.json({ error: "Profile ID is required" }, { status: 400 });
+    }
+
     const result = await auth.api.getSession({
       headers: await headers(),
     });

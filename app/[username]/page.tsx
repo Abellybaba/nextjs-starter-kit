@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { notFound } from "next/navigation";
 import { UserProfile } from "@/utils/types";
 import { templates } from "@/lib/constants";
+import { use } from "react";
 
 interface PublicProfilePageProps {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 }
 
 export default function PublicProfilePage({ params }: PublicProfilePageProps) {
+  const resolvedParams = use(params);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +26,9 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
 
         // Fetch profile by username
         const response = await fetch(
-          `/api/profiles?username=${encodeURIComponent(params.username)}`
+          `/api/profiles?username=${encodeURIComponent(
+            resolvedParams.username
+          )}`
         );
 
         if (response.status === 404) {
@@ -67,10 +71,10 @@ export default function PublicProfilePage({ params }: PublicProfilePageProps) {
       }
     };
 
-    if (params.username) {
+    if (resolvedParams.username) {
       fetchProfile();
     }
-  }, [params.username]);
+  }, [resolvedParams.username]);
 
   const handleLinkClick = async (linkId: string) => {
     try {

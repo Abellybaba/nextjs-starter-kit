@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { UserProfile } from "@/utils/types";
 import {
   MapPin,
@@ -12,11 +13,6 @@ import {
   BookOpen,
   Image as ImageIcon,
   CheckCircle,
-  Eye,
-  MousePointer,
-  Grid3X3,
-  List,
-  TrendingUp,
   Mail,
   Phone,
   Users,
@@ -36,618 +32,661 @@ const DeluxeTemplate: React.FC<DeluxeTemplateProps> = ({
 }) => {
   const [galleryView, setGalleryView] = useState<"grid" | "list">("grid");
 
-  const handleLinkClick = (linkId: string, url: string) => {
-    if (onLinkClick) {
-      onLinkClick(linkId);
-    }
-    window.open(url, "_blank");
-  };
+  const handleLinkClick = useCallback(
+    (linkId: string, url: string) => {
+      try {
+        if (onLinkClick) {
+          onLinkClick(linkId);
+        }
+        window.open(url, "_blank");
+      } catch (error) {
+        console.error("Error handling link click:", error);
+      }
+    },
+    [onLinkClick]
+  );
 
-  const formatBusinessHours = (day: string) => {
-    const hours =
-      profile.businessHours?.[
-        day.toLowerCase() as keyof typeof profile.businessHours
-      ];
-    if (!hours || !hours.isOpen) return "Closed";
-    return `${hours.start} - ${hours.end}`;
-  };
+  const formatBusinessHours = useCallback(
+    (day: string) => {
+      try {
+        const hours =
+          profile.businessHours?.[
+            day.toLowerCase() as keyof typeof profile.businessHours
+          ];
+        if (!hours || !hours.isOpen) return "Closed";
+        return `${hours.start} - ${hours.end}`;
+      } catch (error) {
+        console.error("Error formatting business hours:", error);
+        return "Closed";
+      }
+    },
+    [profile.businessHours]
+  );
 
-  const dayNames = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-  ];
-  const today =
-    dayNames[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+  const { activeLinks, featuredLinks, today } = useMemo(() => {
+    const dayNames = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
 
-  const totalClicks =
-    profile.links?.reduce((total, link) => total + (link.clicks || 0), 0) || 0;
-  const activeLinks = profile.links?.filter((link) => link.isActive) || [];
-  const featuredLinks = activeLinks.filter((link) => link.featured);
+    const today =
+      dayNames[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
+    const activeLinks = profile.links?.filter((link) => link.isActive) || [];
+    const featuredLinks = activeLinks.filter((link) => link.featured);
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      {/* Animated Background Pattern */}
-      <div className="fixed inset-0 opacity-20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_800px_at_50%_200px,#7c3aed40,transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_600px_at_80%_300px,#ec489940,transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_400px_at_20%_600px,#06b6d440,transparent)]" />
+    return {
+      activeLinks,
+      featuredLinks,
+      today,
+    };
+  }, [profile.links]);
+
+  // Safety check for profile data
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Profile Not Found</h1>
+          <p className="text-white/60">Unable to load profile data.</p>
+        </div>
       </div>
+    );
+  }
 
-      {/* Header Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/30 to-pink-600/30 backdrop-blur-sm" />
-        <div className="relative px-4 sm:px-6 lg:px-8 py-12 text-center">
-          <div className="mx-auto w-32 h-32 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl mb-6 relative group">
+  // ENHANCED DELUXE TEMPLATE - Better Design + All User Data
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Floating Contact Button */}
+      {profile.email && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <a
+            href={`mailto:${profile.email}`}
+            className="group w-14 h-14 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-full flex items-center justify-center shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-110"
+          >
+            <Mail className="w-6 h-6 text-white group-hover:scale-110 transition-transform" />
+          </a>
+        </div>
+      )}
+
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-br from-purple-900 to-indigo-900 py-20 relative overflow-hidden">
+        {/* Subtle pattern */}
+        <div className="absolute inset-0 bg-black/20"></div>
+
+        <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
+          {/* Avatar with glow effect */}
+          <div className="w-32 h-32 mx-auto mb-8 rounded-full border-4 border-white/30 overflow-hidden bg-purple-600 shadow-2xl shadow-purple-500/25">
             {profile.avatar ? (
-              <img
+              <Image
                 src={profile.avatar}
-                alt={profile.displayName}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                alt={profile.displayName || "Profile"}
+                width={128}
+                height={128}
+                className="w-full h-full object-cover"
+                unoptimized
+                onError={(e) => {
+                  console.warn("Failed to load avatar image");
+                  e.currentTarget.style.display = "none";
+                }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-4xl font-bold group-hover:from-purple-400 group-hover:to-pink-400 transition-colors duration-300">
-                {profile.displayName?.charAt(0)}
+              <div className="w-full h-full flex items-center justify-center text-3xl font-bold bg-gradient-to-br from-purple-500 to-pink-500">
+                {profile.displayName?.charAt(0) || "?"}
               </div>
             )}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/20 group-hover:to-pink-500/20 transition-all duration-300" />
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
-            {profile.displayName}
+          {/* Name with enhanced styling */}
+          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+            {profile.displayName || "User Profile"}
           </h1>
 
-          <div className="flex items-center justify-center gap-4 mb-6">
-            {profile.verified && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-400/30 rounded-full">
-                <CheckCircle className="w-4 h-4 text-blue-400" />
-                <span className="text-blue-400 text-sm font-medium">
-                  Verified
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 px-3 py-1 bg-white/10 border border-white/20 rounded-full">
-              <Eye className="w-4 h-4 text-white/70" />
-              <span className="text-white/70 text-sm">
-                {profile.views || 0} views
+          {/* Verification badge */}
+          {profile.verified && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/20 border border-blue-400/50 rounded-full mb-6">
+              <CheckCircle className="w-5 h-5 text-blue-400" />
+              <span className="text-blue-300 font-medium">
+                Verified Profile
               </span>
             </div>
-          </div>
+          )}
 
+          {/* Bio with better typography */}
           {profile.bio && (
-            <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed font-light">
+            <p className="text-xl md:text-2xl text-purple-100/90 mb-8 max-w-3xl mx-auto leading-relaxed">
               {profile.bio}
             </p>
           )}
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 max-w-md mx-auto">
-            <div className="text-center p-3 bg-white/5 border border-white/10 rounded-xl">
-              <div className="text-2xl font-bold text-purple-400">
-                {activeLinks.length}
-              </div>
-              <div className="text-xs text-white/60">Links</div>
+          {/* Contact Info */}
+          {(profile.email || profile.phone || profile.location) && (
+            <div className="flex flex-wrap justify-center gap-4 mb-8">
+              {profile.email && (
+                <a
+                  href={`mailto:${profile.email}`}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 hover:border-white/40 transition-all duration-200"
+                >
+                  <Mail className="w-4 h-4" />
+                  <span className="text-sm">{profile.email}</span>
+                </a>
+              )}
+              {profile.phone && (
+                <a
+                  href={`tel:${profile.phone}`}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full border border-white/20 hover:border-white/40 transition-all duration-200"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span className="text-sm">{profile.phone}</span>
+                </a>
+              )}
+              {profile.location && (
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-full border border-white/20">
+                  <MapPin className="w-4 h-4" />
+                  <span className="text-sm">{profile.location}</span>
+                </div>
+              )}
             </div>
-            <div className="text-center p-3 bg-white/5 border border-white/10 rounded-xl">
-              <div className="text-2xl font-bold text-pink-400">
-                {totalClicks}
+          )}
+
+          {/* Profile highlights */}
+          <div className="flex flex-wrap justify-center gap-6 max-w-lg mx-auto">
+            {activeLinks.length > 0 && (
+              <div className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <span className="text-purple-200 text-sm font-medium">
+                  {activeLinks.length} Link{activeLinks.length !== 1 ? 's' : ''} Available
+                </span>
               </div>
-              <div className="text-xs text-white/60">Clicks</div>
-            </div>
-            <div className="text-center p-3 bg-white/5 border border-white/10 rounded-xl">
-              <div className="text-2xl font-bold text-blue-400">
-                {profile.gallery?.length || 0}
+            )}
+            {featuredLinks.length > 0 && (
+              <div className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <span className="text-yellow-200 text-sm font-medium">
+                  ⭐ {featuredLinks.length} Featured
+                </span>
               </div>
-              <div className="text-xs text-white/60">Photos</div>
-            </div>
-            <div className="text-center p-3 bg-white/5 border border-white/10 rounded-xl">
-              <div className="text-2xl font-bold text-green-400">
-                {profile.products?.length || 0}
+            )}
+            {profile.type === "VCARD" && (
+              <div className="bg-white/10 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20">
+                <span className="text-blue-200 text-sm font-medium">
+                  Professional Profile
+                </span>
               </div>
-              <div className="text-xs text-white/60">Products</div>
-            </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Featured Links Highlight */}
-      {featuredLinks.length > 0 && (
-        <div className="px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
-              <Star className="w-6 h-6 text-yellow-400" />
-              Featured Links
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Main content area */}
+      <div className="max-w-6xl mx-auto px-6 py-16 space-y-16">
+        {/* Social Links */}
+        {profile.socialLinks && profile.socialLinks.length > 0 && (
+          <section>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                <Users className="w-8 h-8 text-cyan-400" />
+                Connect With Me
+              </h2>
+              <p className="text-slate-400">
+                Follow me on social media platforms
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-4 max-w-2xl mx-auto">
+              {profile.socialLinks.map((social) => (
+                <a
+                  key={social.id}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 bg-slate-800/50 hover:bg-slate-700 border border-slate-700 hover:border-cyan-500/50 px-6 py-3 rounded-xl transition-all duration-200"
+                >
+                  <div className="w-8 h-8 bg-cyan-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ExternalLink className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-white font-medium">
+                    {social.platform}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Featured Links with enhanced design */}
+        {featuredLinks.length > 0 && (
+          <section>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                <Star className="w-8 h-8 text-yellow-400" />
+                Featured Links
+              </h2>
+              <p className="text-slate-400">
+                Highlighted content and important links
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
               {featuredLinks.map((link) => (
                 <button
                   key={link.id}
                   onClick={() => handleLinkClick(link.id, link.url)}
-                  className="group p-6 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-400/30 rounded-2xl hover:from-yellow-500/20 hover:to-orange-500/20 transition-all duration-300 transform hover:scale-105"
+                  className="group p-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-400/30 rounded-2xl hover:border-yellow-400/60 hover:bg-gradient-to-r hover:from-yellow-500/20 hover:to-orange-500/20 text-left relative overflow-hidden"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    {link.thumbnailUrl ? (
-                      <img
-                        src={link.thumbnailUrl}
-                        alt={link.title}
-                        className="w-12 h-12 object-cover rounded-xl"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-400/10 rounded-full -translate-y-10 translate-x-10"></div>
+                  <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
                         <Star className="w-6 h-6 text-white" />
                       </div>
-                    )}
-                    <ExternalLink className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
-                  </div>
-                  <h3 className="font-semibold text-white text-left mb-2">
-                    {link.title}
-                  </h3>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-yellow-400 font-medium">
-                      ⭐ Featured
-                    </span>
-                    <span className="text-white/60">
-                      {link.clicks || 0} clicks
-                    </span>
+                      <ExternalLink className="w-5 h-5 text-yellow-400 opacity-60 group-hover:opacity-100" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      {link.title}
+                    </h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-yellow-400 font-medium text-sm">
+                        ⭐ Featured
+                      </span>
+                      <span className="text-slate-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                        Click to visit
+                      </span>
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
 
-      {/* Main Content Grid */}
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Links and Gallery */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* All Links Section */}
-            {activeLinks.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                  <ExternalLink className="w-6 h-6 text-purple-400" />
-                  Quick Links
-                  <span className="text-sm text-white/60 ml-auto">
-                    {activeLinks.length} links
-                  </span>
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {activeLinks.map((link) => (
-                    <button
-                      key={link.id}
-                      onClick={() => handleLinkClick(link.id, link.url)}
-                      className="group p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-300"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {link.thumbnailUrl ? (
-                            <img
-                              src={link.thumbnailUrl}
-                              alt={link.title}
-                              className="w-10 h-10 object-cover rounded-lg"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                              <ExternalLink className="w-5 h-5 text-white" />
-                            </div>
-                          )}
-                          <div className="text-left">
-                            <h3 className="font-medium text-white text-sm">
-                              {link.title}
-                            </h3>
-                            <div className="flex items-center gap-2 text-xs text-white/60">
-                              <MousePointer className="w-3 h-3" />
-                              {link.clicks || 0} clicks
-                            </div>
-                          </div>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
+        {/* All Links with better design */}
+        {activeLinks.length > 0 && (
+          <section>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                <ExternalLink className="w-8 h-8 text-purple-400" />
+                All Links
+              </h2>
+              <p className="text-slate-400">
+                Complete collection of links and resources
+              </p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              {activeLinks.map((link) => (
+                <button
+                  key={link.id}
+                  onClick={() => handleLinkClick(link.id, link.url)}
+                  className="group p-5 bg-slate-800/50 border border-slate-700 rounded-xl hover:bg-slate-800 hover:border-slate-600 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                        <ExternalLink className="w-5 h-5 text-white" />
                       </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Gallery Section */}
-            {profile.gallery && profile.gallery.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-semibold flex items-center gap-2">
-                    <ImageIcon className="w-6 h-6 text-blue-400" />
-                    Gallery
-                    <span className="text-sm text-white/60 ml-2">
-                      {profile.gallery.length} images
-                    </span>
-                  </h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setGalleryView("grid")}
-                      className={`p-2 rounded-lg transition-colors ${
-                        galleryView === "grid"
-                          ? "bg-white/20 text-white"
-                          : "bg-white/5 text-white/60"
-                      }`}
-                    >
-                      <Grid3X3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setGalleryView("list")}
-                      className={`p-2 rounded-lg transition-colors ${
-                        galleryView === "list"
-                          ? "bg-white/20 text-white"
-                          : "bg-white/5 text-white/60"
-                      }`}
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {galleryView === "grid" ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {profile.gallery.map((image) => (
-                      <div
-                        key={image.id}
-                        className="aspect-square rounded-xl overflow-hidden group cursor-pointer"
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.altText || "Gallery image"}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {profile.gallery.map((image) => (
-                      <div
-                        key={image.id}
-                        className="flex gap-4 p-4 bg-white/5 border border-white/10 rounded-xl"
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.altText || "Gallery image"}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-medium text-white">
-                            {image.altText || `Image ${image.id.slice(0, 8)}`}
-                          </h3>
-                          <p className="text-white/60 text-sm">Gallery item</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Blog Posts Section */}
-            {profile.type === "VCARD" &&
-              profile.blogPosts &&
-              profile.blogPosts.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                    <BookOpen className="w-6 h-6 text-indigo-400" />
-                    Latest Posts
-                    <span className="text-sm text-white/60 ml-2">
-                      {profile.blogPosts.length} posts
-                    </span>
-                  </h2>
-                  <div className="space-y-4">
-                    {profile.blogPosts.slice(0, 3).map((post) => (
-                      <div
-                        key={post.id}
-                        className="p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
-                      >
-                        <div className="flex gap-4">
-                          {post.imageUrl && (
-                            <img
-                              src={post.imageUrl}
-                              alt={post.title}
-                              className="w-20 h-20 object-cover rounded-lg"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg mb-2">
-                              {post.title}
-                            </h3>
-                            <p className="text-white/70 text-sm mb-3 line-clamp-2">
-                              {post.content}
-                            </p>
-                            <div className="flex items-center gap-4 text-xs text-white/50">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {new Date(
-                                  post.publishedAt
-                                ).toLocaleDateString()}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-          </div>
-
-          {/* Right Column - Business Info */}
-          <div className="space-y-6">
-            {/* Services Section */}
-            {profile.type === "VCARD" &&
-              profile.services &&
-              profile.services.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                    <Briefcase className="w-6 h-6 text-green-400" />
-                    Services
-                    <span className="text-sm text-white/60 ml-2">
-                      {profile.services.length}
-                    </span>
-                  </h2>
-                  <div className="space-y-4">
-                    {profile.services.map((service) => (
-                      <div
-                        key={service.id}
-                        className="p-4 bg-white/5 border border-white/10 rounded-xl"
-                      >
-                        <h3 className="font-semibold text-lg mb-2">
-                          {service.title}
+                      <div>
+                        <h3 className="font-semibold text-white group-hover:text-purple-300">
+                          {link.title}
                         </h3>
-                        {service.description && (
-                          <p className="text-white/70 text-sm mb-3">
-                            {service.description}
+                        {link.description && (
+                          <p className="text-slate-400 text-sm">
+                            {link.description}
                           </p>
                         )}
-                        {service.price && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-400 font-semibold">
-                              {service.price}
-                            </span>
-                            <Zap className="w-4 h-4 text-green-400" />
-                          </div>
+                      </div>
+                    </div>
+                    <div className="text-slate-400 group-hover:text-white">
+                      →
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* vCard Sections with enhanced layouts */}
+        {profile.type === "VCARD" && (
+          <div className="space-y-16">
+            {/* Services */}
+            {profile.services && profile.services.length > 0 && (
+              <section>
+                <div className="text-center mb-10">
+                  <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                    <Briefcase className="w-8 h-8 text-green-400" />
+                    Services
+                  </h2>
+                  <p className="text-slate-400">
+                    Professional services and offerings
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {profile.services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-green-500/30"
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                          <Briefcase className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-white">
+                          {service.title}
+                        </h3>
+                      </div>
+                      {service.description && (
+                        <p className="text-slate-300 mb-4 leading-relaxed">
+                          {service.description}
+                        </p>
+                      )}
+                      {service.price && (
+                        <div className="text-green-400 font-bold text-lg">
+                          {service.price}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Products */}
+            {profile.products && profile.products.length > 0 && (
+              <section>
+                <div className="text-center mb-10">
+                  <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                    <ShoppingBag className="w-8 h-8 text-orange-400" />
+                    Products
+                  </h2>
+                  <p className="text-slate-400">
+                    Available products and merchandise
+                  </p>
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {profile.products.map((product) => (
+                    <div
+                      key={product.id}
+                      className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-orange-500/30"
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                          <ShoppingBag className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-white">
+                          {product.name}
+                        </h3>
+                      </div>
+                      {product.description && (
+                        <p className="text-slate-300 mb-4 leading-relaxed">
+                          {product.description}
+                        </p>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-green-400 font-bold text-xl">
+                          ${product.price?.toFixed(2)}
+                        </span>
+                        {product.linkUrl && (
+                          <a
+                            href={product.linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                          >
+                            View Product <ExternalLink className="w-4 h-4" />
+                          </a>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-
-            {/* Products Section */}
-            {profile.type === "VCARD" &&
-              profile.products &&
-              profile.products.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                    <ShoppingBag className="w-6 h-6 text-orange-400" />
-                    Products
-                    <span className="text-sm text-white/60 ml-2">
-                      {profile.products.length}
-                    </span>
-                  </h2>
-                  <div className="space-y-4">
-                    {profile.products.map((product) => (
-                      <div
-                        key={product.id}
-                        className="p-4 bg-white/5 border border-white/10 rounded-xl group hover:bg-white/10 transition-colors"
-                      >
-                        <div className="flex gap-4">
-                          {product.imageUrl && (
-                            <img
-                              src={product.imageUrl}
-                              alt={product.name}
-                              className="w-16 h-16 object-cover rounded-lg"
-                            />
-                          )}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg mb-1">
-                              {product.name}
-                            </h3>
-                            {product.description && (
-                              <p className="text-white/70 text-sm mb-2">
-                                {product.description}
-                              </p>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <div className="text-green-400 font-bold text-lg">
-                                ${product.price?.toFixed(2)}
-                              </div>
-                              {product.linkUrl && (
-                                <a
-                                  href={product.linkUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-purple-400 text-sm hover:underline flex items-center gap-1"
-                                >
-                                  View <ExternalLink className="w-3 h-3" />
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            {/* Business Hours Section */}
-            {profile.type === "VCARD" && profile.businessHours && (
-              <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                  <Clock className="w-6 h-6 text-blue-400" />
-                  Business Hours
-                </h2>
-                <div className="space-y-3">
-                  {dayNames.map((day) => {
-                    const isToday = day === today;
-                    const hours = formatBusinessHours(day);
-                    const isOpen = hours !== "Closed";
-
-                    return (
-                      <div
-                        key={day}
-                        className={`flex justify-between items-center py-3 px-4 rounded-lg transition-colors ${
-                          isToday
-                            ? "bg-blue-500/20 border border-blue-400/30"
-                            : "bg-white/5"
-                        }`}
-                      >
-                        <span
-                          className={`capitalize font-medium ${
-                            isToday ? "text-blue-400" : "text-white/80"
-                          }`}
-                        >
-                          {day}
-                          {isToday && (
-                            <span className="ml-2 text-xs">(Today)</span>
-                          )}
-                        </span>
-                        <span
-                          className={`text-sm ${
-                            isOpen ? "text-green-400" : "text-red-400"
-                          }`}
-                        >
-                          {hours}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+              </section>
             )}
 
-            {/* Testimonials Section */}
-            {profile.type === "VCARD" &&
-              profile.testimonials &&
-              profile.testimonials.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
-                  <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                    <Award className="w-6 h-6 text-yellow-400" />
-                    Testimonials
-                    <span className="text-sm text-white/60 ml-2">
-                      {profile.testimonials.length}
-                    </span>
-                  </h2>
-                  <div className="space-y-4">
-                    {profile.testimonials.map((testimonial) => (
+            {/* Business Hours & Testimonials Grid */}
+            <div className="grid lg:grid-cols-2 gap-12">
+              {/* Business Hours */}
+              {profile.businessHours && (
+                <div>
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold mb-3 flex items-center justify-center gap-3">
+                      <Clock className="w-7 h-7 text-blue-400" />
+                      Business Hours
+                    </h2>
+                  </div>
+                  <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+                    <div className="space-y-3">
+                      {[
+                        "monday",
+                        "tuesday",
+                        "wednesday",
+                        "thursday",
+                        "friday",
+                        "saturday",
+                        "sunday",
+                      ].map((day) => {
+                        const isToday = day === today;
+                        const hours = formatBusinessHours(day);
+                        const isOpen = hours !== "Closed";
+
+                        return (
+                          <div
+                            key={day}
+                            className={`flex justify-between items-center p-3 rounded-lg ${
+                              isToday
+                                ? "bg-blue-500/20 border border-blue-400/30"
+                                : "bg-slate-700/50"
+                            }`}
+                          >
+                            <span
+                              className={`capitalize font-medium ${
+                                isToday ? "text-blue-300" : "text-white"
+                              }`}
+                            >
+                              {day}
+                              {isToday && (
+                                <span className="ml-2 text-xs">(Today)</span>
+                              )}
+                            </span>
+                            <span
+                              className={`font-medium ${
+                                isOpen ? "text-green-400" : "text-red-400"
+                              }`}
+                            >
+                              {hours}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Testimonials */}
+              {profile.testimonials && profile.testimonials.length > 0 && (
+                <div>
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-bold mb-3 flex items-center justify-center gap-3">
+                      <Award className="w-7 h-7 text-yellow-400" />
+                      Testimonials
+                    </h2>
+                  </div>
+                  <div className="space-y-6">
+                    {profile.testimonials.slice(0, 3).map((testimonial) => (
                       <div
                         key={testimonial.id}
-                        className="p-4 bg-white/5 border border-white/10 rounded-xl"
+                        className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 border-l-4 border-l-yellow-400"
                       >
-                        <Quote className="w-6 h-6 text-purple-400 mb-3" />
-                        <p className="text-white/90 italic mb-4">
+                        <Quote className="w-6 h-6 text-yellow-400 mb-3" />
+                        <p className="text-slate-200 italic mb-4 leading-relaxed">
                           "{testimonial.quote}"
                         </p>
-                        <div className="text-right">
-                          <div className="font-semibold text-purple-300">
-                            {testimonial.author}
-                          </div>
-                          {testimonial.company && (
-                            <div className="text-white/60 text-sm">
-                              {testimonial.company}
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-yellow-300">
+                              {testimonial.author}
                             </div>
-                          )}
+                            {testimonial.company && (
+                              <div className="text-slate-400 text-sm">
+                                {testimonial.company}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex text-yellow-400">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className="w-4 h-4 fill-current" />
+                            ))}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics Overview */}
-      {(profile.views || totalClicks) && (
-        <div className="px-4 sm:px-6 lg:px-8 py-8 bg-black/20">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
-              <TrendingUp className="w-6 h-6 text-green-400" />
-              Performance Overview
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <Eye className="w-8 h-8 text-blue-400 mx-auto mb-3" />
-                <div className="text-3xl font-bold text-blue-400">
-                  {profile.views || 0}
-                </div>
-                <div className="text-sm text-white/60">Profile Views</div>
-              </div>
-              <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <MousePointer className="w-8 h-8 text-green-400 mx-auto mb-3" />
-                <div className="text-3xl font-bold text-green-400">
-                  {totalClicks}
-                </div>
-                <div className="text-sm text-white/60">Total Clicks</div>
-              </div>
-              <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <Users className="w-8 h-8 text-purple-400 mx-auto mb-3" />
-                <div className="text-3xl font-bold text-purple-400">
-                  {Math.floor(
-                    (totalClicks / Math.max(profile.views || 1, 1)) * 100
-                  )}
-                  %
-                </div>
-                <div className="text-sm text-white/60">Engagement</div>
-              </div>
-              <div className="text-center p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <Star className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
-                <div className="text-3xl font-bold text-yellow-400">
-                  {featuredLinks.length}
-                </div>
-                <div className="text-sm text-white/60">Featured</div>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Footer */}
-      <div className="px-4 sm:px-6 lg:px-8 py-12 text-center border-t border-white/10">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <span className="text-white text-sm font-bold">L</span>
+            {/* Blog Posts */}
+            {profile.blogPosts && profile.blogPosts.length > 0 && (
+              <section>
+                <div className="text-center mb-10">
+                  <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                    <BookOpen className="w-8 h-8 text-indigo-400" />
+                    Latest Blog Posts
+                  </h2>
+                  <p className="text-slate-400">Recent articles and updates</p>
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {profile.blogPosts.slice(0, 6).map((post) => (
+                    <div
+                      key={post.id}
+                      className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-indigo-500/30"
+                    >
+                      {post.imageUrl && (
+                        <div className="aspect-video overflow-hidden">
+                          <Image
+                            src={post.imageUrl}
+                            alt={post.title || "Blog post"}
+                            width={400}
+                            height={225}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      )}
+                      <div className="p-6">
+                        <h3 className="text-xl font-semibold text-white mb-2">
+                          {post.title}
+                        </h3>
+                        <p className="text-slate-300 mb-4 line-clamp-3">
+                          {post.content}
+                        </p>
+                        <div className="flex items-center gap-2 text-indigo-400 text-sm">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(post.publishedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+        {/* Skills/Tags Section */}
+        {profile.skills && profile.skills.length > 0 && (
+          <section>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                <Zap className="w-8 h-8 text-amber-400" />
+                Skills & Expertise
+              </h2>
+              <p className="text-slate-400">
+                Areas of specialization and expertise
+              </p>
             </div>
-            <span className="text-white/80 font-medium">
-              Powered by LinkApp
-            </span>
-          </div>
+            <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
+              {profile.skills.map((skill, index) => (
+                <span
+                  key={index}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/30 rounded-full text-amber-300 font-medium hover:bg-gradient-to-r hover:from-amber-500/30 hover:to-orange-500/30 transition-all duration-200"
+                >
+                  {skill}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
 
-          <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/60">
-            {profile.views && (
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4" />
-                {profile.views.toLocaleString()} views
+        {/* Enhanced Gallery */}
+        {profile.gallery && profile.gallery.length > 0 && (
+          <section>
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-3 flex items-center justify-center gap-3">
+                <ImageIcon className="w-8 h-8 text-blue-400" />
+                Gallery
+              </h2>
+              <p className="text-slate-400">Visual showcase and portfolio</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {profile.gallery.slice(0, 12).map((image) => (
+                <div
+                  key={image.id}
+                  className="group aspect-square rounded-xl overflow-hidden bg-slate-800 border border-slate-700 hover:border-blue-500/30"
+                >
+                  <Image
+                    src={image.url}
+                    alt={image.altText || "Gallery"}
+                    width={300}
+                    height={300}
+                    className="w-full h-full object-cover group-hover:scale-105 duration-300"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+            {profile.gallery.length > 12 && (
+              <div className="text-center mt-8">
+                <p className="text-slate-400">
+                  <span className="font-semibold">
+                    +{profile.gallery.length - 12}
+                  </span>{" "}
+                  more images in gallery
+                </p>
               </div>
             )}
-            {totalClicks > 0 && (
-              <div className="flex items-center gap-2">
-                <MousePointer className="w-4 h-4" />
-                {totalClicks.toLocaleString()} clicks
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Updated {new Date().toLocaleDateString()}
-            </div>
-          </div>
-
-          <p className="text-white/40 text-xs mt-4">
-            Create your own professional profile at linkapp.com
-          </p>
-        </div>
+          </section>
+        )}
       </div>
+
+      {/* Enhanced footer */}
+      <footer className="bg-slate-900 border-t border-slate-800 py-12">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold">L</span>
+              </div>
+              <span className="text-xl font-semibold text-white">LinkApp</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-slate-400 mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Updated {new Date().toLocaleDateString()}</span>
+              </div>
+              {profile.type === "VCARD" && (
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  <span>Professional Profile</span>
+                </div>
+              )}
+            </div>
+            <p className="text-slate-500 text-sm">
+              Create your professional profile at linkapp.com
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
